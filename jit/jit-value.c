@@ -473,7 +473,7 @@ jit_value_t jit_value_create_constant
 /*@
  * @deftypefun jit_value_t jit_value_get_param (jit_function_t @var{func}, unsigned int @var{param})
  * Get the value that corresponds to a specified function parameter.
- * Returns NULL if out of memory.
+ * Returns NULL if out of memory or @var{param} is invalid.
  * @end deftypefun
 @*/
 jit_value_t jit_value_get_param(jit_function_t func, unsigned int param)
@@ -488,32 +488,31 @@ jit_value_t jit_value_get_param(jit_function_t func, unsigned int param)
 		return 0;
 	}
 
-	/* If we have already created the values, then exit immediately */
-	values = func->builder->param_values;
-	if(values)
-	{
-		return values[param];
-	}
-
-	/* Create the values for the first time */
 	signature = func->signature;
 	num_params = jit_type_num_params(signature);
-	values = (jit_value_t *)jit_calloc(num_params, sizeof(jit_value_t));
+    if (param >= num_params)
+        return 0;
+	values = func->builder->param_values;
+	/* If we haven't already created the values, do that first */
 	if(!values)
 	{
-		return 0;
-	}
-	func->builder->param_values = values;
-	for(current = 0; current < num_params; ++current)
-	{
-		values[current] = jit_value_create
-			(func, jit_type_get_param(signature, current));
-		if(values[current])
+		values = (jit_value_t *)jit_calloc(num_params, sizeof(jit_value_t));
+		if(!values)
 		{
-			/* The value belongs to the entry block, no matter
-			   where it happens to be created */
-			values[current]->block = func->builder->entry_block;
-			values[current]->is_parameter = 1;
+			return 0;
+		}
+		func->builder->param_values = values;
+		for(current = 0; current < num_params; ++current)
+		{
+			values[current] = jit_value_create
+				(func, jit_type_get_param(signature, current));
+			if(values[current])
+			{
+				/* The value belongs to the entry block, no matter
+				   where it happens to be created */
+				values[current]->block = func->builder->entry_block;
+				values[current]->is_parameter = 1;
+			}
 		}
 	}
 
