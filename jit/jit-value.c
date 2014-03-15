@@ -749,12 +749,10 @@ jit_function_t jit_value_get_function(jit_value_t value)
 {
 	if(value)
 	{
-		return value->block->func;
+		if(_jit_function_ensure_builder(value->block->func))
+			return value->block->func;
 	}
-	else
-	{
-		return 0;
-	}
+    return 0;
 }
 
 /*@
@@ -781,9 +779,12 @@ jit_block_t jit_value_get_block(jit_value_t value)
 @*/
 jit_context_t jit_value_get_context(jit_value_t value)
 {
-	if(value)
+	jit_function_t function;
+
+	function = jit_value_get_function(value);
+	if(function)
 	{
-		return value->block->func->context;
+		return function->context;
 	}
 	else
 	{
